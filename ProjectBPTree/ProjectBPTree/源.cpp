@@ -3,6 +3,7 @@
 using namespace std;
 
 int main() {
+	sjtu::BTree<int,int> btree;
 	cout << "hello world!" << endl;
 
 	return 0;
