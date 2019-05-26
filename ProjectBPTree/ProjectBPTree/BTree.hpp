@@ -12,7 +12,7 @@ namespace sjtu {
 		//B+树大数据块大小
 		constexpr static size_t BLOCK_SIZE = 512;
 		//大数据块预留数据块大小
-		constexpr static size_t INIT_SIZE = 64;
+		constexpr static size_t INIT_SIZE = 32;
 		//Key类型的大小
 		constexpr static size_t KEY_SIZE = sizeof(Key);
 		//Value类型的大小
@@ -87,6 +87,7 @@ namespace sjtu {
 		static void mem_read(MEM_TYPE buff, size_t buff_size, size_t pos) {
 			fseek(fp, buff_size * pos, SEEK_SET);
 			fread(buff, buff_size, 1, fp);
+			++cnt;
 		}
 
 		//块内存读取
@@ -95,6 +96,7 @@ namespace sjtu {
 			fseek(fp, buff_size * pos, SEEK_SET);
 			fwrite(buff, buff_size, 1, fp);
 			fflush(fp);
+			++cnt;
 		}
 
 		//写入B+树基本数据
@@ -306,25 +308,85 @@ namespace sjtu {
 			write_block(&parent_info, &parent_data, l_parent);
 		}
 
-		//平衡索引
-		void balance_normal(Block_Head& info, Normal_Data& normal_data) {
-
+		//合并索引
+		void merge_normal(Block_Head& l_info, Normal_Data& l_data, Block_Head& r_info, Normal_Data& r_data) {
+			for (size_t p = l_info._size, i = 0; i < r_info._size; ++p, ++i) {
+				l_data.val[p] = r_data.val[i];
+			}
+			l_data.val[l_info._size - 1]._key = adjust_normal(l_info._parent, r_info._pos);
+			l_info._size += r_info._size;
+			write_block(&l_info, &l_data, l_info._pos);
 		}
 
-		//调整索引
-		void adjust_normal(size_t pos, size_t removed_child) {
+		//平衡索引
+		void balance_normal(Block_Head& info, Normal_Data& normal_data) {
+			if (info._size >= BLOCK_KEY_NUM / 2) {
+				write_block(&info, &normal_data, info._pos);
+				return;
+			}
+			//判断是否是根
+			if (info._pos == tree_data.root_pos && info._size <= 1) {
+				tree_data.root_pos = normal_data.val[0]._child;
+				write_tree_data();
+				return;
+			}
+			//获取兄弟
+			Block_Head parent_info, brother_info;
+			Normal_Data parent_data, brother_data;
+			read_block(&parent_info, &parent_data, info._parent);
+			size_t value_pos;
+			for (value_pos = 0; parent_data.val[value_pos]._child != info._pos; ++value_pos);
+			if (value_pos > 0) {
+				read_block(&brother_info, &brother_data, parent_data.val[value_pos - 1]._child);
+				if (brother_info._size > BLOCK_KEY_NUM / 2) {
+					for (size_t p = info._size; p > 0; ++p) {
+						normal_data.val[p] = normal_data.val[p - 1];
+					}
+					normal_data.val[0]._child = brother_data.val[brother_info._size - 1]._child;
+					normal_data.val[0]._key = parent_data.val[value_pos - 1]._key;
+					--brother_info._size;
+					++info._size;
+					write_block(&brother_info, &brother_data, brother_info._pos);
+					write_block(&info, &normal_data, info._pos);
+				}
+				else {
+					merge_normal(brother_info, brother_data, info, normal_data);
+				}
+			}
+			else if (value_pos < parent_info._size - 1) {
+				read_block(&brother_info, &brother_data, parent_data.val[value_pos + 1]._child);
+				if (brother_info._size > BLOCK_KEY_NUM / 2) {
+					normal_data.val[info._size]._child = brother_data.val[0]._child;
+					normal_data.val[info._size - 1]._key = parent_data.val[value_pos]._key;
+					for (size_t p = 1; p < brother_info._size; ++p) {
+						brother_data.val[p - 1] = brother_data.val[p];
+					}
+					--brother_info._size;
+					++info._size;
+					write_block(&brother_info, &brother_data, brother_info._pos);
+					write_block(&info, &normal_data, info._pos);
+				}
+				else {
+					merge_normal(info, normal_data, brother_info, brother_data);
+				}
+			}
+		}
+
+		//调整索引(返回关键字)
+		Key adjust_normal(size_t pos, size_t removed_child) {
 			Block_Head info;
 			Normal_Data normal_data;
 			read_block(&info, &normal_data, pos);
 			size_t cur_pos;
 			for (cur_pos = 0; normal_data.val[cur_pos]._child != removed_child; ++cur_pos);
+			Key ans = normal_data.val[cur_pos - 1]._key;
 			normal_data.val[cur_pos - 1]._key = normal_data.val[cur_pos]._key;
 			for (; cur_pos < info._size - 1; ++cur_pos) {
 				normal_data.val[cur_pos] = normal_data.val[cur_pos + 1];
 			}
 			--info._size;
 			balance_normal(info, normal_data);
-			write_block(&info, &normal_data, pos);
+			return ans;
 		}
 
 		//合并叶子
@@ -342,10 +404,11 @@ namespace sjtu {
 			read_block(&temp_info, &temp_data, r_info._next);
 			temp_info._last = l_info._pos;
 			write_block(&temp_info, &temp_data, temp_info._pos);
+			write_block(&l_info, &l_data, l_info._pos);
 		}
 
 		//平衡叶子
-		void balace_leaf(Block_Head& leaf_info, Leaf_Data& leaf_data) {
+		void balance_leaf(Block_Head& leaf_info, Leaf_Data& leaf_data) {
 			if (leaf_info._size >= BLOCK_PAIR_NUM / 2 || leaf_info._pos == tree_data.root_pos) {
 				return;
 			}
@@ -372,6 +435,8 @@ namespace sjtu {
 				}
 				else {
 					merge_leaf(brother_info, brother_data, leaf_info, leaf_data);
+					write_block(&brother_info, &brother_data, brother_info._pos);
+					return;
 				}
 			}
 			//右兄弟
@@ -391,9 +456,15 @@ namespace sjtu {
 					write_block(&brother_info, &brother_data, brother_info._pos);
 					return;
 				}
+				else {
+					merge_leaf(leaf_info, leaf_data, brother_info, brother_data);
+					write_block(&brother_info, &brother_data, brother_info._pos);
+					return;
+				}
 			}
 		}
 	public:
+		inline static int cnt = 0;
 		typedef pair<const Key, Value> value_type;
 
 		class const_iterator;
@@ -728,9 +799,9 @@ namespace sjtu {
 						leaf_data.val[p].first = leaf_data.val[p + 1].first;
 						leaf_data.val[p].second = leaf_data.val[p + 1].second;
 					}
-
-
-
+					balance_leaf(info, leaf_data);
+					--tree_data._size;
+					write_tree_data();
 					return Success;
 				}
 				if (value_pos >= info._size || leaf_data.val[value_pos].first > key) {
