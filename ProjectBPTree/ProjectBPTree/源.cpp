@@ -13,16 +13,14 @@ void print_all(T& btree) {
 	cout << endl;
 }
 
-bool visited[100009] = { 0 };
-bool erased[100009] = { 0 };
-
 int main() {
 	sjtu::BTree<int,int> btree;
 
 	vector<int> to_push;
 	
-	for (int i = 0; i < 100000; ++i) {
-		to_push.push_back(i);
+	for (int i = 0; i < 1000000; ++i) {
+		auto temp = rand();
+		to_push.push_back(temp);
 	}
 
 	cout << "Testing insert...";
@@ -31,6 +29,22 @@ int main() {
 		btree.insert(p, p);
 	}
 	cout << "\nChecking...";
+
+	for (auto p : to_push) {
+		if (btree.find(p)==btree.cend()) {
+			cout << "   Error!\n";
+			break;
+		}
+	}
+
+	int last_one = -1;
+	for (auto p : btree) {
+		if (p.second <= last_one) {
+			cout << "   Error!\n";
+			break;
+		}
+		last_one = p.second;
+	}
 
 	cout << "   Finished!\nTesting erase...";
 	cnt = 0;

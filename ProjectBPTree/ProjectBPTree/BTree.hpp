@@ -9,18 +9,41 @@ namespace sjtu {
 	private:
 		// Your private members go here
 		//常量静态参数
+		//块头
+		class Block_Head {
+		public:
+			//存储类型(0普通 1叶子)
+			bool block_type = false;
+			//数量（L或者M）
+			size_t _size = 0;
+			//相对位置
+			size_t _pos = 0;
+			//父结点
+			size_t _parent = 0;
+			//上一个结点
+			size_t _last = 0;
+			//下一个结点
+			size_t _next = 0;
+		};
+		
+		//索引数据
+		struct Normal_Data_Node {
+			size_t _child = 0;
+			Key _key;
+		};
+
 		//B+树大数据块大小
-		constexpr static size_t BLOCK_SIZE = 512;
+		constexpr static size_t BLOCK_SIZE = 1024;
 		//大数据块预留数据块大小
-		constexpr static size_t INIT_SIZE = 32;
+		constexpr static size_t INIT_SIZE = sizeof(Block_Head);
 		//Key类型的大小
 		constexpr static size_t KEY_SIZE = sizeof(Key);
 		//Value类型的大小
 		constexpr static size_t VALUE_SIZE = sizeof(Value);
 		//大数据块能够存储孩子的个数(M)
-		constexpr static size_t BLOCK_KEY_NUM = (BLOCK_SIZE - INIT_SIZE) / (KEY_SIZE + sizeof(size_t));
+		constexpr static size_t BLOCK_KEY_NUM = (BLOCK_SIZE - INIT_SIZE) / sizeof(Normal_Data_Node) - 1;
 		//小数据块能够存放的记录的个数(L)
-		constexpr static size_t BLOCK_PAIR_NUM = (BLOCK_SIZE - INIT_SIZE) / (sizeof(Key) + VALUE_SIZE);
+		constexpr static size_t BLOCK_PAIR_NUM = (BLOCK_SIZE - INIT_SIZE) / (KEY_SIZE + VALUE_SIZE) - 1;
 		//B+树索引存储地址
 		constexpr static char BPTREE_ADDRESS[128] = "E:/Test/BPTree/bptree_data.sjtu";
 
@@ -40,32 +63,11 @@ namespace sjtu {
 			size_t _size = 0;
 		};
 
-		//块头
-		class Block_Head {
-		public:
-			//存储类型(0普通 1叶子)
-			bool block_type = false;
-			//数量（L或者M）
-			size_t _size = 0;
-			//相对位置
-			size_t _pos = 0;
-			//父结点
-			size_t _parent = 0;
-			//上一个结点
-			size_t _last = 0;
-			//下一个结点
-			size_t _next = 0;
-		};
+		
 
-		//索引数据
 		class Normal_Data {
 		public:
-			class node {
-			public:
-				size_t _child = 0;
-				Key _key;
-			};
-			node val[BLOCK_KEY_NUM];
+			Normal_Data_Node val[BLOCK_KEY_NUM];
 		};
 
 		//叶子数据
@@ -85,7 +87,7 @@ namespace sjtu {
 		//块内存写入
 		template <class MEM_TYPE>
 		static void mem_read(MEM_TYPE buff, size_t buff_size, size_t pos) {
-			fseek(fp, buff_size * pos, SEEK_SET);
+			fseek(fp, long(buff_size * pos), SEEK_SET);
 			fread(buff, buff_size, 1, fp);
 			++cnt;
 		}
@@ -93,7 +95,7 @@ namespace sjtu {
 		//块内存读取
 		template <class MEM_TYPE>
 		static void mem_write(MEM_TYPE buff, size_t buff_size, size_t pos) {
-			fseek(fp, buff_size * pos, SEEK_SET);
+			fseek(fp, long(buff_size * pos), SEEK_SET);
 			fwrite(buff, buff_size, 1, fp);
 			fflush(fp);
 			++cnt;
@@ -146,7 +148,7 @@ namespace sjtu {
 	
 		//索引节点插入新索引
 		void insert_new_index(Block_Head& parent_info, Normal_Data& parent_data, 
-			size_t origin, size_t new_pos, size_t new_index) {
+			size_t origin, size_t new_pos, const Key& new_index) {
 			++parent_info._size;
 			auto p = parent_info._size - 2;
 			for (; parent_data.val[p]._child != origin; --p) {
@@ -1136,6 +1138,7 @@ namespace sjtu {
 			}
 			Block_Head info;
 			memcpy(&info, buff, sizeof(info));
+			sizeof(Normal_Data);
 			Leaf_Data leaf_data;
 			memcpy(&leaf_data, buff + INIT_SIZE, sizeof(leaf_data));
 			for (size_t value_pos = 0;; ++value_pos) {
