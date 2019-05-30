@@ -45,7 +45,7 @@ namespace sjtu {
 		//小数据块能够存放的记录的个数(L)
 		constexpr static size_t BLOCK_PAIR_NUM = (BLOCK_SIZE - INIT_SIZE) / (KEY_SIZE + VALUE_SIZE) - 1;
 		//B+树索引存储地址
-		constexpr static char BPTREE_ADDRESS[128] = "E:/Test/BPTree/bptree_data.sjtu";
+		constexpr static char BPTREE_ADDRESS[128] = "bptree_data.sjtu";
 
 		//私有类
 		//B+树文件头
@@ -63,8 +63,6 @@ namespace sjtu {
 			size_t _size = 0;
 		};
 
-		
-
 		class Normal_Data {
 		public:
 			Normal_Data_Node val[BLOCK_KEY_NUM];
@@ -81,7 +79,7 @@ namespace sjtu {
 		File_Head tree_data;
 
 		//文件指针
-		inline static FILE* fp = nullptr;
+		static FILE* fp;
 
 		//私有函数
 		//块内存写入
@@ -89,7 +87,6 @@ namespace sjtu {
 		static void mem_read(MEM_TYPE buff, size_t buff_size, size_t pos) {
 			fseek(fp, long(buff_size * pos), SEEK_SET);
 			fread(buff, buff_size, 1, fp);
-			++cnt;
 		}
 
 		//块内存读取
@@ -98,7 +95,6 @@ namespace sjtu {
 			fseek(fp, long(buff_size * pos), SEEK_SET);
 			fwrite(buff, buff_size, 1, fp);
 			fflush(fp);
-			++cnt;
 		}
 
 		//写入B+树基本数据
@@ -531,7 +527,6 @@ namespace sjtu {
 			memcpy(&tree_data, buff, sizeof(tree_data));
 		}
 	public:
-		inline static int cnt = 0;
 		typedef pair<const Key, Value> value_type;
 
 		class const_iterator;
@@ -1203,4 +1198,5 @@ namespace sjtu {
 			return cend();
 		}
 	};
+	template <typename Key, typename Value, typename Compare> FILE* BTree<Key, Value, Compare>::fp = nullptr;
 }  // namespace sjtu
