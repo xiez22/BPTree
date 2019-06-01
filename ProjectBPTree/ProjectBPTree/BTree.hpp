@@ -15,35 +15,35 @@ namespace sjtu {
 			//存储类型(0普通 1叶子)
 			bool block_type = false;
 			//数量（L或者M）
-			size_t _size = 0;
+			off_t _size = 0;
 			//相对位置
-			size_t _pos = 0;
+			off_t _pos = 0;
 			//父结点
-			size_t _parent = 0;
+			off_t _parent = 0;
 			//上一个结点
-			size_t _last = 0;
+			off_t _last = 0;
 			//下一个结点
-			size_t _next = 0;
+			off_t _next = 0;
 		};
 		
 		//索引数据
 		struct Normal_Data_Node {
-			size_t _child = 0;
+			off_t _child = 0;
 			Key _key;
 		};
 
 		//B+树大数据块大小
-		constexpr static size_t BLOCK_SIZE = 1024;
+		constexpr static off_t BLOCK_SIZE = 4096;
 		//大数据块预留数据块大小
-		constexpr static size_t INIT_SIZE = sizeof(Block_Head);
+		constexpr static off_t INIT_SIZE = sizeof(Block_Head);
 		//Key类型的大小
-		constexpr static size_t KEY_SIZE = sizeof(Key);
+		constexpr static off_t KEY_SIZE = sizeof(Key);
 		//Value类型的大小
-		constexpr static size_t VALUE_SIZE = sizeof(Value);
+		constexpr static off_t VALUE_SIZE = sizeof(Value);
 		//大数据块能够存储孩子的个数(M)
-		constexpr static size_t BLOCK_KEY_NUM = (BLOCK_SIZE - INIT_SIZE) / sizeof(Normal_Data_Node) - 1;
+		constexpr static off_t BLOCK_KEY_NUM = (BLOCK_SIZE - INIT_SIZE) / sizeof(Normal_Data_Node) - 1;
 		//小数据块能够存放的记录的个数(L)
-		constexpr static size_t BLOCK_PAIR_NUM = (BLOCK_SIZE - INIT_SIZE) / (KEY_SIZE + VALUE_SIZE) - 1;
+		constexpr static off_t BLOCK_PAIR_NUM = (BLOCK_SIZE - INIT_SIZE) / (KEY_SIZE + VALUE_SIZE) - 1;
 		//B+树索引存储地址
 		constexpr static char BPTREE_ADDRESS[128] = "bptree_data.sjtu";
 
@@ -52,15 +52,15 @@ namespace sjtu {
 		class File_Head {
 		public:
 			//存储BLOCK占用的空间
-			size_t block_cnt = 1;
+			off_t block_cnt = 1;
 			//存储根节点的位置
-			size_t root_pos = 0;
+			off_t root_pos = 0;
 			//存储数据块头
-			size_t data_block_head = 0;
+			off_t data_block_head = 0;
 			//存储数据块尾
-			size_t data_block_rear = 0;
+			off_t data_block_rear = 0;
 			//存储大小
-			size_t _size = 0;
+			off_t _size = 0;
 		};
 
 		class Normal_Data {
@@ -84,14 +84,14 @@ namespace sjtu {
 		//私有函数
 		//块内存写入
 		template <class MEM_TYPE>
-		static void mem_read(MEM_TYPE buff, size_t buff_size, size_t pos) {
+		static void mem_read(MEM_TYPE buff, off_t buff_size, off_t pos) {
 			fseek(fp, long(buff_size * pos), SEEK_SET);
 			fread(buff, buff_size, 1, fp);
 		}
 
 		//块内存读取
 		template <class MEM_TYPE>
-		static void mem_write(MEM_TYPE buff, size_t buff_size, size_t pos) {
+		static void mem_write(MEM_TYPE buff, off_t buff_size, off_t pos) {
 			fseek(fp, long(buff_size * pos), SEEK_SET);
 			fwrite(buff, buff_size, 1, fp);
 			fflush(fp);
@@ -106,7 +106,7 @@ namespace sjtu {
 		}
 
 		//获取新内存
-		size_t memory_allocation() {
+		off_t memory_allocation() {
 			++tree_data.block_cnt;
 			write_tree_data();
 			char buff[BLOCK_SIZE] = { 0 };
@@ -115,7 +115,7 @@ namespace sjtu {
 		}
 
 		//创建新的索引结点
-		size_t create_normal_node(size_t _parent) {
+		off_t create_normal_node(off_t _parent) {
 			auto node_pos = memory_allocation();
 			Block_Head temp;
 			Normal_Data normal_data;
@@ -128,7 +128,7 @@ namespace sjtu {
 		}
 
 		//创建新的叶子结点
-		size_t create_leaf_node(size_t _parent, size_t _last, size_t _next) {
+		off_t create_leaf_node(off_t _parent, off_t _last, off_t _next) {
 			auto node_pos = memory_allocation();
 			Block_Head temp;
 			Leaf_Data leaf_data;
@@ -144,7 +144,7 @@ namespace sjtu {
 	
 		//索引节点插入新索引
 		void insert_new_index(Block_Head& parent_info, Normal_Data& parent_data, 
-			size_t origin, size_t new_pos, const Key& new_index) {
+			off_t origin, off_t new_pos, const Key& new_index) {
 			++parent_info._size;
 			auto p = parent_info._size - 2;
 			for (; parent_data.val[p]._child != origin; --p) {
@@ -157,7 +157,7 @@ namespace sjtu {
 
 		//写入节点信息
 		template <class DATA_TYPE>
-		static void write_block(Block_Head* _info, DATA_TYPE* _data, size_t _pos) {
+		static void write_block(Block_Head* _info, DATA_TYPE* _data, off_t _pos) {
 			char buff[BLOCK_SIZE] = { 0 };
 			memcpy(buff, _info, sizeof(Block_Head));
 			memcpy(buff + INIT_SIZE, _data, sizeof(DATA_TYPE));
@@ -166,7 +166,7 @@ namespace sjtu {
 
 		//读取结点信息
 		template <class DATA_TYPE>
-		static void read_block(Block_Head* _info, DATA_TYPE* _data, size_t _pos) {
+		static void read_block(Block_Head* _info, DATA_TYPE* _data, off_t _pos) {
 			char buff[BLOCK_SIZE] = { 0 };
 			mem_read(buff, BLOCK_SIZE, _pos);
 			memcpy(_info, buff, sizeof(Block_Head));
@@ -174,9 +174,9 @@ namespace sjtu {
 		}
 
 		//分裂叶子结点
-		Key split_leaf_node(size_t pos, Block_Head& origin_info, Leaf_Data& origin_data) {
+		Key split_leaf_node(off_t pos, Block_Head& origin_info, Leaf_Data& origin_data) {
 			//读入数据
-			size_t parent_pos;
+			off_t parent_pos;
 			Block_Head parent_info;
 			Normal_Data parent_data;
 
@@ -217,8 +217,8 @@ namespace sjtu {
 			read_block(&new_info, &new_data, new_pos);
 
 			//移动数据的位置
-			size_t mid_pos = origin_info._size >> 1;
-			for (size_t p = mid_pos, i = 0; p < origin_info._size; ++p, ++i) {
+			off_t mid_pos = origin_info._size >> 1;
+			for (off_t p = mid_pos, i = 0; p < origin_info._size; ++p, ++i) {
 				new_data.val[i].first = origin_data.val[p].first;
 				new_data.val[i].second = origin_data.val[p].second;
 				++new_info._size;
@@ -237,7 +237,7 @@ namespace sjtu {
 		//分裂父亲（返回新的父亲）
 		bool check_parent(Block_Head& child_info) {
 			//读入数据
-			size_t parent_pos, origin_pos = child_info._parent;
+			off_t parent_pos, origin_pos = child_info._parent;
 			Block_Head parent_info, origin_info;
 			Normal_Data parent_data, origin_data;
 			read_block(&origin_info, &origin_data, origin_pos);
@@ -271,8 +271,8 @@ namespace sjtu {
 			read_block(&new_info, &new_data, new_pos);
 
 			//移动数据的位置
-			size_t mid_pos = origin_info._size >> 1;
-			for (size_t p = mid_pos + 1, i = 0; p < origin_info._size; ++p,++i) {
+			off_t mid_pos = origin_info._size >> 1;
+			for (off_t p = mid_pos + 1, i = 0; p < origin_info._size; ++p,++i) {
 				if (origin_data.val[p]._child == child_info._pos) {
 					child_info._parent = new_pos;
 				}
@@ -290,7 +290,7 @@ namespace sjtu {
 		}
 
 		//修改LCA的索引(平衡叶子时)
-		void change_index(size_t l_parent, size_t l_child, const Key& new_key) {
+		void change_index(off_t l_parent, off_t l_child, const Key& new_key) {
 			//读取数据
 			Block_Head parent_info;
 			Normal_Data parent_data;
@@ -299,7 +299,7 @@ namespace sjtu {
 				change_index(parent_info._parent, l_parent, new_key);
 				return;
 			}
-			for (size_t cur_pos = parent_info._size - 2;; --cur_pos) {
+			for (off_t cur_pos = parent_info._size - 2;; --cur_pos) {
 				if (parent_data.val[cur_pos]._child == l_child) {
 					parent_data.val[cur_pos]._key = new_key;
 					break;
@@ -310,7 +310,7 @@ namespace sjtu {
 
 		//合并索引
 		void merge_normal(Block_Head& l_info, Normal_Data& l_data, Block_Head& r_info, Normal_Data& r_data) {
-			for (size_t p = l_info._size, i = 0; i < r_info._size; ++p, ++i) {
+			for (off_t p = l_info._size, i = 0; i < r_info._size; ++p, ++i) {
 				l_data.val[p] = r_data.val[i];
 			}
 			l_data.val[l_info._size - 1]._key = adjust_normal(r_info._parent, r_info._pos);
@@ -338,13 +338,13 @@ namespace sjtu {
 			Block_Head parent_info, brother_info;
 			Normal_Data parent_data, brother_data;
 			read_block(&parent_info, &parent_data, info._parent);
-			size_t value_pos;
+			off_t value_pos;
 			for (value_pos = 0; parent_data.val[value_pos]._child != info._pos; ++value_pos);
 			if (value_pos > 0) {
 				read_block(&brother_info, &brother_data, parent_data.val[value_pos - 1]._child);
 				brother_info._parent = info._parent;
 				if (brother_info._size > BLOCK_KEY_NUM / 2) {
-					for (size_t p = info._size; p > 0; --p) {
+					for (off_t p = info._size; p > 0; --p) {
 						normal_data.val[p] = normal_data.val[p - 1];
 					}
 					normal_data.val[0]._child = brother_data.val[brother_info._size - 1]._child;
@@ -369,7 +369,7 @@ namespace sjtu {
 					normal_data.val[info._size]._child = brother_data.val[0]._child;
 					normal_data.val[info._size - 1]._key = parent_data.val[value_pos]._key;
 					parent_data.val[value_pos]._key = brother_data.val[0]._key;
-					for (size_t p = 1; p < brother_info._size; ++p) {
+					for (off_t p = 1; p < brother_info._size; ++p) {
 						brother_data.val[p - 1] = brother_data.val[p];
 					}
 					--brother_info._size;
@@ -387,11 +387,11 @@ namespace sjtu {
 		}
 
 		//调整索引(返回关键字)
-		Key adjust_normal(size_t pos, size_t removed_child) {
+		Key adjust_normal(off_t pos, off_t removed_child) {
 			Block_Head info;
 			Normal_Data normal_data;
 			read_block(&info, &normal_data, pos);
-			size_t cur_pos;
+			off_t cur_pos;
 			for (cur_pos = 0; normal_data.val[cur_pos]._child != removed_child; ++cur_pos);
 			Key ans = normal_data.val[cur_pos - 1]._key;
 			normal_data.val[cur_pos - 1]._key = normal_data.val[cur_pos]._key;
@@ -405,7 +405,7 @@ namespace sjtu {
 
 		//合并叶子
 		void merge_leaf(Block_Head& l_info, Leaf_Data& l_data, Block_Head& r_info, Leaf_Data& r_data) {
-			for (size_t p = l_info._size, i = 0; i < r_info._size; ++p, ++i) {
+			for (off_t p = l_info._size, i = 0; i < r_info._size; ++p, ++i) {
 				l_data.val[p].first = r_data.val[i].first;
 				l_data.val[p].second = r_data.val[i].second;
 			}
@@ -448,7 +448,7 @@ namespace sjtu {
 			Normal_Data parent_data;
 
 			read_block(&parent_info, &parent_data, leaf_info._parent);
-			size_t node_pos = 0;
+			off_t node_pos = 0;
 			for (; node_pos < parent_info._size; ++node_pos) {
 				if (parent_data.val[node_pos]._child == leaf_info._pos)
 					break;
@@ -459,7 +459,7 @@ namespace sjtu {
 				read_block(&brother_info, &brother_data, leaf_info._last);
 					brother_info._parent = leaf_info._parent;
 					if (brother_info._size > BLOCK_PAIR_NUM / 2) {
-						for (size_t p = leaf_info._size; p > 0; --p) {
+						for (off_t p = leaf_info._size; p > 0; --p) {
 							leaf_data.val[p].first = leaf_data.val[p - 1].first;
 							leaf_data.val[p].second = leaf_data.val[p - 1].second;
 						}
@@ -485,7 +485,7 @@ namespace sjtu {
 				if (brother_info._size > BLOCK_PAIR_NUM / 2) {
 					leaf_data.val[leaf_info._size].first = brother_data.val[0].first;
 					leaf_data.val[leaf_info._size].second = brother_data.val[0].second;
-					for (size_t p = 1; p < brother_info._size; ++p) {
+					for (off_t p = 1; p < brother_info._size; ++p) {
 						brother_data.val[p - 1].first = brother_data.val[p].first;
 						brother_data.val[p - 1].second = brother_data.val[p].second;
 					}
@@ -543,7 +543,7 @@ namespace sjtu {
 			//存储当前块的基本信息
 			Block_Head block_info;
 			//存储当前指向的元素位置
-			size_t cur_pos = 0;
+			off_t cur_pos = 0;
 
 		public:
 			bool modify(const Value& value) {
@@ -661,7 +661,7 @@ namespace sjtu {
 			//存储当前块的基本信息
 			Block_Head block_info;
 			//存储当前指向的元素位置
-			size_t cur_pos = 0;
+			off_t cur_pos = 0;
 		public:
 			const_iterator() {
 				// TODO
@@ -843,7 +843,7 @@ namespace sjtu {
 
 			//查找正确的节点位置
 			char buff[BLOCK_SIZE] = { 0 };
-			size_t cur_pos = tree_data.root_pos, cur_parent = 0;
+			off_t cur_pos = tree_data.root_pos, cur_parent = 0;
 			while (true) {
 				mem_read(buff, BLOCK_SIZE, cur_pos);
 				Block_Head temp;
@@ -859,7 +859,7 @@ namespace sjtu {
 				}
 				Normal_Data normal_data;
 				memcpy(&normal_data, buff + INIT_SIZE, sizeof(normal_data));
-				size_t child_pos = temp._size - 1;
+				off_t child_pos = temp._size - 1;
 				for (; child_pos > 0; --child_pos) {
 					if (!(normal_data.val[child_pos - 1]._key > key)) {
 						break;
@@ -874,7 +874,7 @@ namespace sjtu {
 			memcpy(&info, buff, sizeof(info));
 			Leaf_Data leaf_data;
 			memcpy(&leaf_data, buff + INIT_SIZE, sizeof(leaf_data));
-			for (size_t value_pos = 0;; ++value_pos) {
+			for (off_t value_pos = 0;; ++value_pos) {
 				if (value_pos < info._size && (!(leaf_data.val[value_pos].first<key || leaf_data.val[value_pos].first>key))) {
 					//throw runtime_error();
 					return pair<iterator, OperationResult>(end(), Fail);
@@ -890,7 +890,7 @@ namespace sjtu {
 						}
 					}
 					
-					for (size_t p = info._size - 1; p >= value_pos; --p) {
+					for (off_t p = info._size - 1; p >= value_pos; --p) {
 						leaf_data.val[p + 1].first = leaf_data.val[p].first;
 						leaf_data.val[p + 1].second = leaf_data.val[p].second;
 						if (p == value_pos)
@@ -924,7 +924,7 @@ namespace sjtu {
 			}
 			//查找正确的节点位置
 			char buff[BLOCK_SIZE] = { 0 };
-			size_t cur_pos = tree_data.root_pos, cur_parent = 0;
+			off_t cur_pos = tree_data.root_pos, cur_parent = 0;
 			while (true) {
 				mem_read(buff, BLOCK_SIZE, cur_pos);
 				Block_Head temp;
@@ -940,7 +940,7 @@ namespace sjtu {
 				}
 				Normal_Data normal_data;
 				memcpy(&normal_data, buff + INIT_SIZE, sizeof(normal_data));
-				size_t child_pos = temp._size - 1;
+				off_t child_pos = temp._size - 1;
 				for (; child_pos > 0; --child_pos) {
 					if (!(normal_data.val[child_pos - 1]._key > key)) {
 						break;
@@ -954,11 +954,11 @@ namespace sjtu {
 			memcpy(&info, buff, sizeof(info));
 			Leaf_Data leaf_data;
 			memcpy(&leaf_data, buff + INIT_SIZE, sizeof(leaf_data));
-			for (size_t value_pos = 0;; ++value_pos) {
+			for (off_t value_pos = 0;; ++value_pos) {
 				if (value_pos < info._size && (!(leaf_data.val[value_pos].first<key || leaf_data.val[value_pos].first>key))) {
 					//执行删除操作
 					--info._size;
-					for (size_t p = value_pos; p < info._size; ++p) {
+					for (off_t p = value_pos; p < info._size; ++p) {
 						leaf_data.val[p].first = leaf_data.val[p + 1].first;
 						leaf_data.val[p].second = leaf_data.val[p + 1].second;
 					}
@@ -1027,7 +1027,7 @@ namespace sjtu {
 			return tree_data._size == 0;
 		}
 		// Return the number of <K,V> pairs
-		size_t size() const {
+		off_t size() const {
 			if (!fp)
 				return 0;
 			return tree_data._size;
@@ -1049,7 +1049,7 @@ namespace sjtu {
 			}
 			//查找正确的节点位置
 			char buff[BLOCK_SIZE] = { 0 };
-			size_t cur_pos = tree_data.root_pos, cur_parent = 0;
+			off_t cur_pos = tree_data.root_pos, cur_parent = 0;
 			while (true) {
 				mem_read(buff, BLOCK_SIZE, cur_pos);
 				Block_Head temp;
@@ -1065,7 +1065,7 @@ namespace sjtu {
 				}
 				Normal_Data normal_data;
 				memcpy(&normal_data, buff + INIT_SIZE, sizeof(normal_data));
-				size_t child_pos = temp._size - 1;
+				off_t child_pos = temp._size - 1;
 				for (; child_pos > 0; --child_pos) {
 					if (!(normal_data.val[child_pos - 1]._key > key)) {
 						break;
@@ -1077,7 +1077,7 @@ namespace sjtu {
 			memcpy(&info, buff, sizeof(info));
 			Leaf_Data leaf_data;
 			memcpy(&leaf_data, buff + INIT_SIZE, sizeof(leaf_data));
-			for (size_t value_pos = 0;; ++value_pos) {
+			for (off_t value_pos = 0;; ++value_pos) {
 				if (value_pos < info._size && (!(leaf_data.val[value_pos].first<key || leaf_data.val[value_pos].first>key))) {
 					return leaf_data.val[value_pos].second;
 				}
@@ -1091,7 +1091,7 @@ namespace sjtu {
 		 *   that compares equivalent to the specified argument,
 		 * The default method of check the equivalence is !(a < b || b > a)
 		 */
-		size_t count(const Key& key) const {
+		off_t count(const Key& key) const {
 			return find(key) == cend() ? 0 : 1;
 		}
 		/**
@@ -1107,7 +1107,7 @@ namespace sjtu {
 			}
 			//查找正确的节点位置
 			char buff[BLOCK_SIZE] = { 0 };
-			size_t cur_pos = tree_data.root_pos, cur_parent = 0;
+			off_t cur_pos = tree_data.root_pos, cur_parent = 0;
 			while (true) {
 				mem_read(buff, BLOCK_SIZE, cur_pos);
 				Block_Head temp;
@@ -1123,7 +1123,7 @@ namespace sjtu {
 				}
 				Normal_Data normal_data;
 				memcpy(&normal_data, buff + INIT_SIZE, sizeof(normal_data));
-				size_t child_pos = temp._size - 1;
+				off_t child_pos = temp._size - 1;
 				for (; child_pos > 0; --child_pos) {
 					if (!(normal_data.val[child_pos - 1]._key > key)) {
 						break;
@@ -1136,7 +1136,7 @@ namespace sjtu {
 			sizeof(Normal_Data);
 			Leaf_Data leaf_data;
 			memcpy(&leaf_data, buff + INIT_SIZE, sizeof(leaf_data));
-			for (size_t value_pos = 0;; ++value_pos) {
+			for (off_t value_pos = 0;; ++value_pos) {
 				if (value_pos < info._size && (!(leaf_data.val[value_pos].first<key || leaf_data.val[value_pos].first>key))) {
 					iterator result;
 					result.cur_bptree = this;
@@ -1156,7 +1156,7 @@ namespace sjtu {
 			}
 			//查找正确的节点位置
 			char buff[BLOCK_SIZE] = { 0 };
-			size_t cur_pos = tree_data.root_pos, cur_parent = 0;
+			off_t cur_pos = tree_data.root_pos, cur_parent = 0;
 			while (true) {
 				mem_read(buff, BLOCK_SIZE, cur_pos);
 				Block_Head temp;
@@ -1172,7 +1172,7 @@ namespace sjtu {
 				}
 				Normal_Data normal_data;
 				memcpy(&normal_data, buff + INIT_SIZE, sizeof(normal_data));
-				size_t child_pos = temp._size - 1;
+				off_t child_pos = temp._size - 1;
 				for (; child_pos > 0; --child_pos) {
 					if (!(normal_data.val[child_pos - 1]._key > key)) {
 						break;
@@ -1184,7 +1184,7 @@ namespace sjtu {
 			memcpy(&info, buff, sizeof(info));
 			Leaf_Data leaf_data;
 			memcpy(&leaf_data, buff + INIT_SIZE, sizeof(leaf_data));
-			for (size_t value_pos = 0;; ++value_pos) {
+			for (off_t value_pos = 0;; ++value_pos) {
 				if (value_pos < info._size && (!(leaf_data.val[value_pos].first<key || leaf_data.val[value_pos].first>key))) {
 					const_iterator result;
 					result.block_info = info;
