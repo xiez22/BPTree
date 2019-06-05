@@ -4,6 +4,8 @@
 #include "exception.hpp"
 #include <cstdio>
 namespace sjtu {
+	//B+树索引存储地址
+	constexpr char BPTREE_ADDRESS[128] = "bptree_data.sjtu";
 	template <class Key, class Value, class Compare = std::less<Key> >
 	class BTree {
 	private:
@@ -44,8 +46,6 @@ namespace sjtu {
 		constexpr static off_t BLOCK_KEY_NUM = (BLOCK_SIZE - INIT_SIZE) / sizeof(Normal_Data_Node) - 1;
 		//小数据块能够存放的记录的个数(L)
 		constexpr static off_t BLOCK_PAIR_NUM = (BLOCK_SIZE - INIT_SIZE) / (KEY_SIZE + VALUE_SIZE) - 1;
-		//B+树索引存储地址
-		constexpr static char BPTREE_ADDRESS[128] = "bptree_data.sjtu";
 
 		//私有类
 		//B+树文件头
