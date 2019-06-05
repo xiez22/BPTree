@@ -16,7 +16,7 @@ namespace sjtu {
 		public:
 			//存储类型(0普通 1叶子)
 			bool block_type = false;
-			//数量（L或者M）
+			//数量
 			off_t _size = 0;
 			//相对位置
 			off_t _pos = 0;
@@ -82,14 +82,14 @@ namespace sjtu {
 		static FILE* fp;
 
 		//私有函数
-		//块内存写入
+		//块内存读取
 		template <class MEM_TYPE>
 		static void mem_read(MEM_TYPE buff, off_t buff_size, off_t pos) {
 			fseek(fp, long(buff_size * pos), SEEK_SET);
 			fread(buff, buff_size, 1, fp);
 		}
 
-		//块内存读取
+		//块内存写入
 		template <class MEM_TYPE>
 		static void mem_write(MEM_TYPE buff, off_t buff_size, off_t pos) {
 			fseek(fp, long(buff_size * pos), SEEK_SET);

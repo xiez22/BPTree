@@ -18,7 +18,7 @@ int main() {
 
 	vector<int> to_push;
 	
-	for (int i = 0; i < 10000000; ++i) {
+	for (int i = 0; i < 1000000; ++i) {
 		auto temp = rand();
 		to_push.push_back(temp);
 	}
@@ -33,7 +33,7 @@ int main() {
 		++cnt;
 	}
 	cout << "\nChecking...";
-	/*
+	
 	for (auto p : to_push) {
 		if (btree.find(p)==btree.cend()) {
 			cout << "   Error!\n";
@@ -48,7 +48,7 @@ int main() {
 			break;
 		}
 		last_one = p.second;
-	}*/
+	}
 
 	cout << "   Finished!\nTesting erase...";
 	cnt = 0;
